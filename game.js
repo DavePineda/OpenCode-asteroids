@@ -182,6 +182,29 @@ class PowerUp {
   }
 }
 
+// ── Skins de la nave ──────────────────────────────────────────────────────────
+const SKINS = [
+  { nombre: 'CLÁSICA',   color: '#fff',    llama: 'rgba(255,130,0,0.85)' },
+  { nombre: 'ESMERALDA', color: '#3aff8c', llama: 'rgba(58,255,140,0.85)' },
+  { nombre: 'MAGENTA',   color: '#ff5bd6', llama: 'rgba(255,91,214,0.85)' },
+  { nombre: 'SOLAR',     color: '#ffcc00', llama: 'rgba(255,160,0,0.95)' },
+];
+let skinIndex = 0;
+let skinAviso = 0;   // segundos restantes para mostrar el nombre en el HUD
+
+function cargarSkin() {
+  try {
+    const i = parseInt(localStorage.getItem('asteroids_skin'), 10);
+    if (Number.isInteger(i) && i >= 0 && i < SKINS.length) skinIndex = i;
+  } catch { /* localStorage no disponible */ }
+}
+
+function guardarSkin() {
+  try { localStorage.setItem('asteroids_skin', String(skinIndex)); } catch { }
+}
+
+const skin = () => SKINS[skinIndex];
+
 // ── Ship ──────────────────────────────────────────────────────────────────────
 class Ship {
   constructor() { this.reset(); }
@@ -243,7 +266,7 @@ class Ship {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
     const boosting = this.speedBoost > 0;
-    ctx.strokeStyle = boosting ? '#ffcc00' : '#fff';
+    ctx.strokeStyle = boosting ? '#ffcc00' : skin().color;
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
 
@@ -262,7 +285,7 @@ class Ship {
       ctx.moveTo(-8, -4);
       ctx.lineTo(-8 - rand(6, 14) * (boosting ? 1.6 : 1), 0);
       ctx.lineTo(-8,  4);
-      ctx.strokeStyle = boosting ? 'rgba(255, 204, 0, 0.95)' : 'rgba(255, 130, 0, 0.85)';
+      ctx.strokeStyle = boosting ? 'rgba(255, 204, 0, 0.95)' : skin().llama;
       ctx.stroke();
     }
 
@@ -465,6 +488,15 @@ function killShip() {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 function update(dt) {
+  if (skinAviso > 0) skinAviso -= dt;
+
+  // Cambiar de skin
+  if (pressed('KeyS')) {
+    skinIndex = (skinIndex + 1) % SKINS.length;
+    guardarSkin();
+    skinAviso = 1.5;
+  }
+
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
     updateShootingStars(dt);
@@ -571,7 +603,7 @@ function drawLifeIcon(x, y) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-Math.PI / 2);
-  ctx.strokeStyle = '#fff';
+  ctx.strokeStyle = skin().color;
   ctx.lineWidth   = 1.2;
   ctx.lineJoin    = 'round';
   ctx.beginPath();
@@ -601,6 +633,13 @@ function drawHUD() {
 
   for (let i = 0; i < lives; i++)
     drawLifeIcon(W - 16 - i * 22, 18);
+
+  if (skinAviso > 0) {
+    ctx.globalAlpha = Math.min(1, skinAviso / 0.5);
+    ctx.fillStyle   = skin().color;
+    ctx.fillText(`NAVE: ${skin().nombre}`, W / 2, 62);
+    ctx.globalAlpha = 1;
+  }
 
 }
 
@@ -642,5 +681,6 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
+cargarSkin();
 initGame();
 requestAnimationFrame(loop);
